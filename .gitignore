@@ -119,4 +119,4 @@ dist
 .pnp.*
 
 
-package-lock.json
+package-lock.jsonnode_modules/

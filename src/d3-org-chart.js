@@ -30,7 +30,7 @@ export class OrgChart {
 
             id: `ID${Math.floor(Math.random() * 1000000)}`, // Id for event handlings
             firstDraw: true,    // Whether chart is drawn for the first time
-            ctx: document.createElement('canvas').getContext('2d'),
+            ctx: null, // SALT fork: created lazily by getTextWidth so construction works without a DOM (SSR, jsdom, node:test)
             initialExpandLevel: 1,
             nodeDefaultBackground: 'none',
             lastTransform: { x: 0, y: 0, k: 1 },  // Panning and zooming values
@@ -41,7 +41,7 @@ export class OrgChart {
             /*  INTENDED FOR PUBLIC OVERRIDE */
 
             svgWidth: 800,   // Configure svg width
-            svgHeight: window.innerHeight - 100,  // Configure svg height
+            svgHeight: typeof window !== 'undefined' ? window.innerHeight - 100 : 600,  // Configure svg height (SALT fork: SSR-safe)
             container: "body",  // Set parent container, either CSS style selector or DOM element
             data: null, // Set data, it must be an array of objects, where hierarchy is clearly defined via id and parent ID (property names are configurable)
             connections: [], // Sets connection data, array of objects, SAMPLE:  [{from:"145",to:"201",label:"Conflicts of interest"}]
@@ -526,7 +526,6 @@ export class OrgChart {
         //InnerFunctions which will update visuals
         const attrs = this.getChartState();
         if (!attrs.data || attrs.data.length == 0) {
-            console.log('ORG CHART - Data is empty');
             if (attrs.container) {
                 select(attrs.container).select('.nodes-wrapper').remove();
                 select(attrs.container).select('.links-wrapper').remove();
@@ -1895,6 +1894,15 @@ export class OrgChart {
         defaultFont = "Helvetice",
         ctx
     } = {}) {
+        // SALT fork: lazily create and cache the measuring context on first use
+        if (!ctx) {
+            const attrs = this.getChartState();
+            if (!attrs.ctx && typeof document !== 'undefined') {
+                attrs.ctx = document.createElement('canvas').getContext('2d');
+            }
+            ctx = attrs.ctx;
+        }
+        if (!ctx) return String(text || '').length * fontSize * 0.6;
         ctx.font = `${fontWeight || ''} ${fontSize}px ${defaultFont} `
         const measurement = ctx.measureText(text);
         return measurement.width;
@@ -1903,7 +1911,30 @@ export class OrgChart {
     // Clear after moving off from the page
     clear() {
         const attrs = this.getChartState();
-        d3.select(window).on(`resize.${attrs.id}`, null);
+        if (typeof window !== 'undefined') d3.select(window).on(`resize.${attrs.id}`, null);
+        if (typeof document !== 'undefined') d3.select(document).on(`fullscreenchange.${attrs.id}`, null);
         attrs.svg && attrs.svg.selectAll("*").remove();
+    }
+
+    // SALT fork: full teardown for component frameworks (React StrictMode mounts twice).
+    // Removes window/document listeners, zoom handlers and the rendered svg so the
+    // container can be re-used and no closures over stale data survive unmount.
+    destroy() {
+        const attrs = this.getChartState();
+        this.clear();
+        if (attrs.svg) {
+            attrs.svg.on('.zoom', null);
+            attrs.svg.remove();
+        }
+        if (attrs.container && typeof document !== 'undefined') {
+            const container = d3.select(attrs.container);
+            container.selectAll('svg.svg-chart-container').remove();
+        }
+        attrs.svg = null;
+        attrs.chart = null;
+        attrs.root = null;
+        attrs.allNodes = null;
+        attrs.firstDraw = true;
+        return this;
     }
 }
