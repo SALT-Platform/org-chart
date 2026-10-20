@@ -1,6 +1,6 @@
 {
   "name": "d3-org-chart",
-  "version": "3.1.1-salt.1",
+  "version": "3.1.1-salt.2",
   "module": "./src/d3-org-chart.js",
   "description": "Highly customizable org chart, created with d3 (SALT fork: typed, ESM-first, DOM-free construction, destroy())",
   "keywords": [

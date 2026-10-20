@@ -1921,6 +1921,11 @@ export class OrgChart {
     // container can be re-used and no closures over stale data survive unmount.
     destroy() {
         const attrs = this.getChartState();
+        // Stop in-flight zoom/expand transitions first so no tween touches detached nodes.
+        if (attrs.svg && typeof attrs.svg.interrupt === 'function') {
+            attrs.svg.interrupt();
+            attrs.svg.selectAll('*').interrupt();
+        }
         this.clear();
         if (attrs.svg) {
             attrs.svg.on('.zoom', null);

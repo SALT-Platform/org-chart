@@ -13,7 +13,7 @@ without wrappers that fight the library. Every change is additive and upstreamab
 | `index.js` explicit `.js` extension | Required by Node ESM resolution. |
 | Lazy canvas context in `getTextWidth` | Constructing the chart no longer touches `document`, so it works in SSR, jsdom and `node:test`. |
 | SSR-safe default `svgHeight` | No `window` access at construction. |
-| `destroy()` + `clear()` removes the `fullscreenchange` listener | React StrictMode mounts twice; upstream leaks document listeners and zoom handlers on unmount. |
+| `destroy()` interrupts in-flight transitions; `destroy()` + `clear()` remove the `fullscreenchange` listener | React StrictMode mounts twice; upstream leaks document listeners and zoom handlers on unmount. |
 | Removed `console.log` on empty data | Keeps production consoles clean. |
 | `test/salt-fork.test.mjs` (`npm test`) | Regression tests for the above, runnable with plain Node. |
 
